@@ -8,8 +8,9 @@ test/config YAML with schema-validated writes — no shell access required.
 ## Requirements
 
 - Node.js 20+
-- The `perfscale` binary on `PATH` ([install](https://perfscale.su/docs/oss/getting-started)),
-  or point `PERFSCALE_BIN` at it
+- The `perfscale` binary on `PATH` — `npm install -g @perfscale/exe`, or any
+  [other install method](https://perfscale.su/docs/oss/getting-started); or
+  point `PERFSCALE_BIN` at it
 
 ## Setup
 
