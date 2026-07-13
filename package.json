@@ -1,0 +1,17 @@
+{
+  "name": "perfscale-mcp-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MCP servers for perfscale: local OSS CLI and controlplane (perfscale.su / perfscale.ru)",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@perfscale/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the perfscale OSS CLI: run load tests, lint and manage test/config YAML locally",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "perfscale-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "yaml": "^2.6.0",
+    "zod": "^3.24.0"
+  }
+}
