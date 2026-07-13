@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "MCP server for the perfscale controlplane (perfscale.su / perfscale.ru): machines, tests, runs, metrics, audit",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Perfscale/mcp.git",
+    "directory": "packages/controlplane-mcp"
+  },
+  "homepage": "https://perfscale.su/docs/api-reference/mcp",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "perfscale-controlplane-mcp": "dist/index.js"

@@ -61,3 +61,15 @@ pnpm install
 pnpm test        # vitest across all packages
 pnpm build       # tsc -b per package
 ```
+
+## Releasing
+
+Bump the version in the package's `package.json`, then tag and push:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+CI publishes to npm (`release.yml`); packages whose version is already on
+the registry are skipped, so packages version independently. Requires the
+`NPM_TOKEN` repo secret.

@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "MCP server for the perfscale OSS CLI: run load tests, lint and manage test/config YAML locally",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Perfscale/mcp.git",
+    "directory": "packages/perfscale-mcp"
+  },
+  "homepage": "https://perfscale.su/docs/oss/mcp",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "perfscale-mcp": "dist/index.js"
