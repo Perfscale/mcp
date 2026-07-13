@@ -1,6 +1,6 @@
 {
   "name": "@perfscale/controlplane-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for the perfscale controlplane (perfscale.su / perfscale.ru): machines, tests, runs, metrics, audit",
   "license": "Apache-2.0",
   "repository": {
