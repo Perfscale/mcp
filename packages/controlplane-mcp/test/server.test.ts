@@ -8,7 +8,11 @@ import { buildServer } from "../src/server.js";
 
 const EXPECTED_TOOLS = [
   "whoami",
-  "tenant_limits",
+  "limits",
+  "usage",
+  "write_test",
+  "list_configs",
+  "write_config",
   "list_machines",
   "get_machine",
   "list_tests",
@@ -105,5 +109,81 @@ describe("controlplane MCP server", () => {
     const client = await connectedClient(fetchFn as unknown as typeof fetch);
     const res = await client.callTool({ name: "list_machines", arguments: {} });
     expect(res.isError).toBe(true);
+  });
+
+  it("write_test creates via POST and updates via PUT", async () => {
+    const calls: Array<{ method?: string; url: string; body: unknown }> = [];
+    const fetchFn = vi.fn(async (url: unknown, init?: RequestInit) => {
+      calls.push({
+        method: init?.method,
+        url: String(url),
+        body: JSON.parse(init?.body as string),
+      });
+      return jsonResponse({ id: "t1" });
+    });
+    const client = await connectedClient(fetchFn as unknown as typeof fetch);
+
+    await client.callTool({
+      name: "write_test",
+      arguments: {
+        name: "smoke",
+        config: { steps: [{ use: "std/http@v1", with: { url: "https://x" } }] },
+      },
+    });
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].url).toContain("/api/v1/tests");
+    expect((calls[0].body as { type: string }).type).toBe("native");
+
+    await client.callTool({
+      name: "write_test",
+      arguments: { testId: "t1", name: "smoke-2" },
+    });
+    expect(calls[1].method).toBe("PUT");
+    expect(calls[1].url).toContain("/api/v1/tests/t1");
+  });
+
+  it("write_test without name/config is a clear isError, no request made", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({}));
+    const client = await connectedClient(fetchFn as unknown as typeof fetch);
+    const res = await client.callTool({ name: "write_test", arguments: {} });
+    expect(res.isError).toBe(true);
+    expect((res.content as Array<{ text: string }>)[0].text).toContain("requires");
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it("write_config creates and updates configurations", async () => {
+    const calls: Array<{ method?: string; url: string }> = [];
+    const fetchFn = vi.fn(async (url: unknown, init?: RequestInit) => {
+      calls.push({ method: init?.method, url: String(url) });
+      return jsonResponse({ id: "c1", name: "evening-peak" });
+    });
+    const client = await connectedClient(fetchFn as unknown as typeof fetch);
+
+    await client.callTool({
+      name: "write_config",
+      arguments: { name: "evening-peak", config: { vus: 50, duration: "10m" } },
+    });
+    expect(calls[0]).toMatchObject({ method: "POST" });
+    expect(calls[0].url).toContain("/api/v1/configurations");
+
+    await client.callTool({
+      name: "write_config",
+      arguments: { configId: "c1", config: { vus: 80, duration: "10m" } },
+    });
+    expect(calls[1]).toMatchObject({ method: "PUT" });
+    expect(calls[1].url).toContain("/api/v1/configurations/c1");
+  });
+
+  it("usage and limits hit their endpoints", async () => {
+    const urls: string[] = [];
+    const fetchFn = vi.fn(async (url: unknown) => {
+      urls.push(String(url));
+      return jsonResponse({});
+    });
+    const client = await connectedClient(fetchFn as unknown as typeof fetch);
+    await client.callTool({ name: "usage", arguments: {} });
+    await client.callTool({ name: "limits", arguments: {} });
+    expect(urls[0]).toContain("/api/v1/ai/usage");
+    expect(urls[1]).toContain("/api/v1/tenants/limits");
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@perfscale/controlplane-mcp",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "MCP server for the perfscale controlplane (perfscale.su / perfscale.ru): machines, tests, runs, metrics, audit",
   "license": "Apache-2.0",
   "repository": {
@@ -16,7 +16,11 @@
   "bin": {
     "perfscale-controlplane-mcp": "dist/index.js"
   },
-  "main": "dist/index.js",
+  "main": "dist/lib.js",
+  "exports": {
+    ".": "./dist/lib.js"
+  },
+  "types": "dist/lib.d.ts",
   "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",

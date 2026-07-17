@@ -56,7 +56,7 @@ export class ControlplaneClient {
   }
 
   async request<T>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "PUT" | "DELETE",
     path: string,
     opts: { query?: Record<string, string | number | undefined>; body?: unknown } = {},
   ): Promise<T> {
@@ -92,6 +92,14 @@ export class ControlplaneClient {
 
   post<T>(path: string, body: unknown): Promise<T> {
     return this.request<T>("POST", path, { body });
+  }
+
+  put<T>(path: string, body: unknown): Promise<T> {
+    return this.request<T>("PUT", path, { body });
+  }
+
+  delete<T>(path: string): Promise<T> {
+    return this.request<T>("DELETE", path);
   }
 }
 

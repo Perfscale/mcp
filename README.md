@@ -48,11 +48,27 @@ user, Enterprise: 5 per user), then:
 }
 ```
 
-Tools: `whoami`, `tenant_limits`, `list_machines`, `get_machine`, `list_tests`,
-`get_test`, `list_runs`, `get_run`, `get_run_logs`, `runs_by_machine`,
-`run_test`, `metrics_catalog`, `query_metrics`, `get_otel_timeseries`,
-`list_dashboards`, `list_git_repos`, `sync_git_repo`, `list_env_vars`
-(values masked), `audit_log`.
+Tools: `whoami`, `limits`, `usage`, `list_machines`, `get_machine`,
+`list_tests`, `get_test`, `write_test`, `list_configs`, `write_config`,
+`list_runs`, `get_run`, `get_run_logs`, `runs_by_machine`, `run_test`,
+`metrics_catalog`, `query_metrics`, `get_otel_timeseries`, `list_dashboards`,
+`list_git_repos`, `sync_git_repo`, `list_env_vars` (values masked),
+`audit_log`.
+
+Every tool call is metered against the workspace's monthly AI tool-call
+budget — `usage` shows where you stand, `limits` shows the plan.
+
+#### Composite mode (workspace MCP servers)
+
+By default the server also aggregates the **remote MCP servers attached to
+your workspace** (dashboard → Settings → AI → MCP Servers): their tools
+appear next to the core ones, prefixed with the server's name (`grafana` →
+`grafana_search_dashboards`), and calls are proxied through. Only remote
+transports are supported (streamable HTTP, SSE fallback) — never local
+commands. Resolving the attached servers requires an **admin** token: header
+values are secrets, so a regular member's token gets the core tools only. A
+remote that is down is skipped with a warning; the core surface always
+works. Set `PERFSCALE_MCP_COMPOSITE=off` to force the plain core server.
 
 ## Development
 

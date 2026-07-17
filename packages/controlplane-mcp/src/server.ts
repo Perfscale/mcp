@@ -38,7 +38,7 @@ export function buildServer(client: ControlplaneClient): McpServer {
   );
 
   server.registerTool(
-    "tenant_limits",
+    "limits",
     {
       title: "Workspace plan & limits",
       description:
@@ -46,6 +46,18 @@ export function buildServer(client: ControlplaneClient): McpServer {
       inputSchema: {},
     },
     async () => guarded(() => client.get("/tenants/limits")),
+  );
+
+  server.registerTool(
+    "usage",
+    {
+      title: "AI tool-call usage",
+      description:
+        "This month's AI tool-call usage against the plan budget: used, limit, period. " +
+        "Every MCP/ASK-AI tool call counts toward it.",
+      inputSchema: {},
+    },
+    async () => guarded(() => client.get("/ai/usage")),
   );
 
   // ── Machines ──────────────────────────────────────────────────────────
@@ -90,6 +102,93 @@ export function buildServer(client: ControlplaneClient): McpServer {
       inputSchema: { testId: z.string() },
     },
     async ({ testId }) => guarded(() => client.get(`/tests/${testId}`)),
+  );
+
+  server.registerTool(
+    "write_test",
+    {
+      title: "Create or update a test",
+      description:
+        "Create a test (omit testId) or update one (pass testId). `config` is the " +
+        "test's definition: for native tests {steps:[...], vus?, duration?, before?, " +
+        "variables?} (perfscale step YAML as JSON), for k6 {script: \"...\"}. " +
+        "Read an existing test with get_test first when updating.",
+      inputSchema: {
+        testId: z.string().optional().describe("Update this test instead of creating one"),
+        name: z.string().optional().describe("Test name (required when creating)"),
+        description: z.string().optional(),
+        type: z
+          .enum(["native", "k6", "jmeter", "locust", "artillery", "gatling", "custom"])
+          .optional()
+          .describe("Test type (required when creating; default native)"),
+        config: z
+          .record(z.unknown())
+          .optional()
+          .describe("Test definition JSON (required when creating)"),
+      },
+    },
+    async ({ testId, name, description, type, config }) =>
+      guarded(() => {
+        if (testId) {
+          return client.put(`/tests/${testId}`, { name, description, type, config });
+        }
+        if (!name || !config) {
+          throw new Error("Creating a test requires 'name' and 'config'");
+        }
+        return client.post("/tests", {
+          name,
+          description,
+          type: type ?? "native",
+          config,
+        });
+      }),
+  );
+
+  // ── Configurations (run presets) ──────────────────────────────────────
+  server.registerTool(
+    "list_configs",
+    {
+      title: "List run configurations",
+      description:
+        "Workspace run configurations (vus/duration or stages presets). Their id or " +
+        "name works as run_test's configurationId, alongside the built-in presets " +
+        "(debug/smoke/load/stress/spike/soak).",
+      inputSchema: {},
+    },
+    async () => guarded(() => client.get("/configurations")),
+  );
+
+  server.registerTool(
+    "write_config",
+    {
+      title: "Create or update a run configuration",
+      description:
+        "Create a named run configuration (omit configId) or update one (pass configId). " +
+        "`config` is the run shape: {vus: N, duration: \"5m\"} or " +
+        "{stages: [{duration: \"1m\", target: 10}, ...]}. Use it in run_test via " +
+        "configurationId (the configuration's id or name).",
+      inputSchema: {
+        configId: z
+          .string()
+          .optional()
+          .describe("Update this configuration instead of creating one"),
+        name: z.string().optional().describe("Unique name (required when creating)"),
+        config: z
+          .record(z.unknown())
+          .optional()
+          .describe("Run config JSON (required when creating)"),
+      },
+    },
+    async ({ configId, name, config }) =>
+      guarded(() => {
+        if (configId) {
+          return client.put(`/configurations/${configId}`, { name, config });
+        }
+        if (!name || !config) {
+          throw new Error("Creating a configuration requires 'name' and 'config'");
+        }
+        return client.post("/configurations", { name, config });
+      }),
   );
 
   // ── Runs (tasks) ──────────────────────────────────────────────────────
