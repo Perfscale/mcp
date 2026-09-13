@@ -71,6 +71,40 @@ describe("ControlplaneClient", () => {
     expect((err as Error).message).toMatch(/PERFSCALE_API_TOKEN/);
   });
 
+  it("PUTs and DELETEs with the same auth", async () => {
+    const seen: Array<{ method?: string; hasAuth: boolean; body: unknown }> = [];
+    const fetchFn = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      seen.push({
+        method: init?.method,
+        hasAuth: (init?.headers as Record<string, string>).Authorization === "Bearer psk_testtoken",
+        body: init?.body ? JSON.parse(init.body as string) : null,
+      });
+      return jsonResponse({});
+    });
+    const c = makeClient(fetchFn as unknown as typeof fetch);
+    await c.put("/tests/t1", { name: "x" });
+    await c.delete("/tests/t1");
+    expect(seen[0]).toEqual({ method: "PUT", hasAuth: true, body: { name: "x" } });
+    expect(seen[1]).toEqual({ method: "DELETE", hasAuth: true, body: null });
+  });
+
+  it("falls back to HTTP <status> when the error body is not JSON", async () => {
+    const fetchFn = vi.fn(async () => new Response("<html>oops</html>", { status: 500 }));
+    const err = await makeClient(fetchFn as unknown as typeof fetch)
+      .get("/machines")
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ControlplaneError);
+    expect((err as ControlplaneError).status).toBe(500);
+    expect((err as Error).message).toBe("HTTP 500");
+  });
+
+  it("uses <status>: <message> when the error body has no code", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ message: "boom" }, 400));
+    await expect(makeClient(fetchFn as unknown as typeof fetch).get("/machines")).rejects.toThrow(
+      "400: boom",
+    );
+  });
+
   it("fromEnv requires PERFSCALE_API_TOKEN", () => {
     vi.stubEnv("PERFSCALE_API_TOKEN", "");
     expect(() => ControlplaneClient.fromEnv()).toThrow(/Settings → API Tokens/);
@@ -82,6 +116,13 @@ describe("ControlplaneClient", () => {
     const c = ControlplaneClient.fromEnv();
     expect(c.url("/health")).toBe("https://perfscale.su/api/v1/health");
   });
+
+  it("fromEnv honors a custom PERFSCALE_API_URL", () => {
+    vi.stubEnv("PERFSCALE_API_TOKEN", "psk_x");
+    vi.stubEnv("PERFSCALE_API_URL", "https://perfscale.ru/");
+    const c = ControlplaneClient.fromEnv();
+    expect(c.url("/health")).toBe("https://perfscale.ru/api/v1/health");
+  });
 });
 
 describe("maskEnvVars", () => {
@@ -90,5 +131,10 @@ describe("maskEnvVars", () => {
       { key: "API_SECRET", value: "s3cr3t" } as { key: string; value?: string },
     ]);
     expect(masked[0]).toEqual({ key: "API_SECRET", value: "***" });
+  });
+
+  it("leaves absent values absent", () => {
+    const masked = maskEnvVars([{ key: "NO_VALUE" } as { key: string; value?: string }]);
+    expect(masked[0]).toEqual({ key: "NO_VALUE", value: undefined });
   });
 });

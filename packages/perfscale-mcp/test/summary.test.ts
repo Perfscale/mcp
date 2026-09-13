@@ -79,4 +79,22 @@ http_reqs..............: 10 1.00/s
     expect(s.min_ms).toBe(1);
     expect(s.max_ms).toBe(60_000);
   });
+
+  it("treats unit-less durations as ms", () => {
+    const out = `http_req_duration......: avg=5 p(95)=7
+http_reqs..............: 10 1.00/s
+`;
+    const s = parseSummary(out)!;
+    expect(s.avg_ms).toBe(5);
+    expect(s.p95_ms).toBe(7);
+  });
+
+  it("defaults durations to null and error_rate to 0 when those lines are absent", () => {
+    const s = parseSummary("http_reqs..............: 42 3.50/s\n")!;
+    expect(s.total_requests).toBe(42);
+    expect(s.requests_per_sec).toBeCloseTo(3.5, 9);
+    expect(s.avg_ms).toBeNull();
+    expect(s.p99_ms).toBeNull();
+    expect(s.error_rate).toBe(0);
+  });
 });

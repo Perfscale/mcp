@@ -32,6 +32,11 @@ describe("classify", () => {
     expect(classify("- just\n- a list\n")).toBe("invalid");
     expect(classify(": : :")).toBe("invalid");
   });
+  it("flags scalar and empty YAML as invalid", () => {
+    expect(classify("just a string")).toBe("invalid");
+    expect(classify("42")).toBe("invalid");
+    expect(classify("")).toBe("invalid");
+  });
 });
 
 describe("listConfigs", () => {
@@ -52,6 +57,18 @@ describe("listConfigs", () => {
     const f = join(dir, "x.yaml");
     await writeFile(f, "a: 1\n");
     await expect(listConfigs(f)).rejects.toThrow(/Not a directory/);
+  });
+
+  it("skips dotfiles, dot-directories, and node_modules", async () => {
+    await writeFile(join(dir, ".hidden.yaml"), "vus: 1\n");
+    await mkdir(join(dir, ".git"));
+    await writeFile(join(dir, ".git", "hooks.yaml"), "vus: 1\n");
+    await mkdir(join(dir, "node_modules"));
+    await writeFile(join(dir, "node_modules", "dep.yaml"), "vus: 1\n");
+    await writeFile(join(dir, "visible.yaml"), "vus: 1\n");
+
+    const entries = await listConfigs(dir);
+    expect(entries.map((e) => e.path.split("/").pop())).toEqual(["visible.yaml"]);
   });
 });
 
@@ -78,6 +95,13 @@ describe("writeYaml / readConfig / removeConfig", () => {
     await expect(writeYaml(join(dir, "x.txt"), "a: 1\n")).rejects.toThrow(/Not a YAML/);
     await expect(readConfig(join(dir, "x.js"))).rejects.toThrow(/Not a YAML/);
     await expect(removeConfig(join(dir, "x.sh"))).rejects.toThrow(/Not a YAML/);
+  });
+
+  it("accepts uppercase .YAML/.YML extensions", async () => {
+    const p = join(dir, "SUITE.YAML");
+    await writeYaml(p, "vus: 10\n");
+    expect(await readConfig(p)).toBe("vus: 10\n");
+    await writeYaml(join(dir, "other.YML"), "vus: 5\n");
   });
 
   it("removes files", async () => {

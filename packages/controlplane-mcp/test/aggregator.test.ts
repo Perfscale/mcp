@@ -147,6 +147,42 @@ describe("composite aggregator", () => {
     const res = await client.callTool({ name: "nonexistent_tool", arguments: {} });
     expect(res.isError).toBe(true);
   });
+
+  it("core tool calls are proxied to the BFF through the core upstream", async () => {
+    const fetchFn = vi.fn(async (url: unknown) => {
+      expect(String(url)).toContain("/api/v1/auth/me");
+      return jsonResponse({ id: "u1", email: "a@b.c" });
+    });
+    const client = await connectComposite(
+      cpClient(fetchFn as unknown as typeof fetch),
+      [],
+    );
+    const res = await client.callTool({ name: "whoami", arguments: {} });
+    expect(res.isError).toBeFalsy();
+    expect((res.content as Array<{ text: string }>)[0].text).toContain("a@b.c");
+  });
+
+  it("a remote that dies after connecting is reported and core tools still list", async () => {
+    const remote = await startRemote();
+    const errors: string[] = [];
+    const server = await buildCompositeServer(
+      cpClient(fetch),
+      [{ id: "r1", name: "grafana", url: remote.url, headers: {}, enabled: true }],
+      { onRemoteError: (name) => errors.push(name) },
+    );
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test", version: "0.0.0" });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+
+    // Kill the remote between connect and tools/list.
+    remote.http.closeAllConnections();
+    await new Promise<void>((resolve) => remote.http.close(() => resolve()));
+
+    const { tools } = await client.listTools();
+    expect(tools.some((t) => t.name === "whoami")).toBe(true);
+    expect(tools.some((t) => t.name.startsWith("grafana_"))).toBe(false);
+    expect(errors).toContain("grafana");
+  });
 });
 
 describe("fetchRemoteServers", () => {
@@ -170,5 +206,12 @@ describe("fetchRemoteServers", () => {
       );
       expect(servers).toEqual([]);
     }
+  });
+
+  it("other failures (5xx) propagate — a broken controlplane is not silent", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ message: "boom" }, 500));
+    await expect(
+      fetchRemoteServers(cpClient(fetchFn as unknown as typeof fetch)),
+    ).rejects.toThrow(/boom/);
   });
 });
