@@ -73,8 +73,8 @@ export class ControlplaneClient {
       try {
         const body = (await res.json()) as { message?: string; code?: string };
         if (body.message) message = `${body.code ?? res.status}: ${body.message}`;
-      } catch {
-        /* non-JSON error body */
+      } catch (e) {
+        console.error(`[controlplane] non-JSON error body (HTTP ${res.status}):`, e);
       }
       if (res.status === 401) {
         message +=

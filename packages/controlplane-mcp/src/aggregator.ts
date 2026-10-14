@@ -71,7 +71,11 @@ async function connectRemote(remote: RemoteMcpServer): Promise<Client> {
       new StreamableHTTPClientTransport(url, { requestInit: { headers } }),
     );
     return client;
-  } catch {
+  } catch (e) {
+    console.error(
+      `[composite] streamable HTTP connect to '${remote.name}' failed, trying SSE:`,
+      e,
+    );
     const client = new Client(CLIENT_INFO);
     await client.connect(new SSEClientTransport(url, { requestInit: { headers } }));
     return client;

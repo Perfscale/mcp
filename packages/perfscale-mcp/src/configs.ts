@@ -20,7 +20,8 @@ export function classify(content: string): DocKind {
     const doc = parseYaml(content);
     if (doc === null || typeof doc !== "object" || Array.isArray(doc)) return "invalid";
     return "steps" in doc ? "test" : "config";
-  } catch {
+  } catch (e) {
+    console.error("[configs] YAML parse failed, classifying as invalid:", e);
     return "invalid";
   }
 }

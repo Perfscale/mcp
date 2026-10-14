@@ -82,7 +82,8 @@ export async function runTest(input: RunTestInput, exec: ExecFn = defaultExec): 
     let exported: unknown | null = null;
     try {
       exported = JSON.parse(await readFile(exportPath, "utf8"));
-    } catch {
+    } catch (e) {
+      console.error(`[perfscale] no readable summary export at ${exportPath}:`, e);
       exported = null;
     }
     return {
